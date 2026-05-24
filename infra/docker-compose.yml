@@ -104,6 +104,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3002
+      HOSTNAME: "0.0.0.0"
       # URL usada pelo browser (passa pelo nginx)
       NEXT_PUBLIC_API_URL: ${PUBLIC_URL:-http://localhost}
       # URL usada pelo SSR do Next.js (direto ao backend via rede interna)
@@ -119,4 +120,4 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 60s
