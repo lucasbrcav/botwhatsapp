@@ -17,7 +17,7 @@ services:
   # Para escanear o QR durante o setup use: docker compose port waha 3000#
   # ------------------------------------------------------------------ #
   waha:
-    image: devlikeapro/waha:latest
+    image: devlikeapro/waha:noweb
     container_name: waha
     restart: unless-stopped
     # Porta exposta somente para acesso local temporário durante setup.
