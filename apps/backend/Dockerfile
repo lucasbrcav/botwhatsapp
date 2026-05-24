@@ -8,7 +8,8 @@ RUN npm run build
 
 FROM node:20-alpine AS runner
 WORKDIR /app
-RUN apk add --no-cache curl
+# curl para healthcheck; openssl necessário pelas engines do Prisma em Alpine
+RUN apk add --no-cache curl openssl
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
@@ -17,4 +18,10 @@ RUN npx prisma generate
 
 EXPOSE 3001
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "\
+  echo '[startup] === Backend iniciando ===' && \
+  echo '[startup] Executando migrations...' && \
+  npx prisma migrate deploy && \
+  echo '[startup] Migrations OK. Iniciando servidor...' && \
+  exec node dist/main \
+"]
