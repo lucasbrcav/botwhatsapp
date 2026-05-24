@@ -12,8 +12,8 @@ RUN apk add --no-cache curl
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY prisma ./prisma
+RUN npx prisma generate
 
 EXPOSE 3001
 
