@@ -3,6 +3,8 @@ version: '3.9'
 networks:
   botnet:
     driver: bridge
+  proxy:
+    external: true
 
 volumes:
   sqlite_data:
@@ -10,15 +12,21 @@ volumes:
   redis_data:
 
 services:
+  # ------------------------------------------------------------------ #
+  # WAHA — gateway WhatsApp (só acessível internamente pela botnet)      #
+  # Para escanear o QR durante o setup use: docker compose port waha 3000#
+  # ------------------------------------------------------------------ #
   waha:
     image: devlikeapro/waha:latest
     container_name: waha
     restart: unless-stopped
+    # Porta exposta somente para acesso local temporário durante setup.
+    # Remova esta linha após o QR ser escaneado em produção.
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       WHATSAPP_API_KEY: ${WAHA_API_KEY}
-      WHATSAPP_HOOK_URL: http://backend:3001/webhooks/waha
+      WHATSAPP_HOOK_URL: http://backend:3001/api/webhooks/waha
       WHATSAPP_HOOK_EVENTS: message,session.status
     volumes:
       - waha_data:/app/.waha
@@ -51,8 +59,9 @@ services:
       dockerfile: Dockerfile
     container_name: backend
     restart: unless-stopped
-    ports:
-      - "3001:3001"
+    # Sem porta exposta — tráfego chega pelo nginx
+    expose:
+      - "3001"
     environment:
       NODE_ENV: production
       PORT: 3001
@@ -64,10 +73,12 @@ services:
       ADMIN_PASS_HASH: ${ADMIN_PASS_HASH}
       DATABASE_URL: file:/data/bot.db
       REDIS_URL: redis://redis:6379
+      ADMIN_ORIGIN: ${ADMIN_ORIGIN:-http://localhost}
     volumes:
       - sqlite_data:/data
     networks:
       - botnet
+      - proxy
     depends_on:
       redis:
         condition: service_healthy
@@ -86,15 +97,19 @@ services:
       dockerfile: Dockerfile
     container_name: admin
     restart: unless-stopped
-    ports:
-      - "3002:3002"
+    # Sem porta exposta — tráfego chega pelo nginx
+    expose:
+      - "3002"
     environment:
       NODE_ENV: production
       PORT: 3002
-      NEXT_PUBLIC_API_URL: http://localhost:3001
+      # URL usada pelo browser (passa pelo nginx)
+      NEXT_PUBLIC_API_URL: ${PUBLIC_URL:-http://localhost}
+      # URL usada pelo SSR do Next.js (direto ao backend via rede interna)
       INTERNAL_API_URL: http://backend:3001
     networks:
       - botnet
+      - proxy
     depends_on:
       backend:
         condition: service_healthy
