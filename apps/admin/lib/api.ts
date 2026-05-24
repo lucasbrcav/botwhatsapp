@@ -1,5 +1,8 @@
 const INTERNAL_API = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const PUBLIC_API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+// No browser, NEXT_PUBLIC_API_URL precisa ser embutida em build-time.
+// Como admin e backend ficam no mesmo domínio (nginx), usamos URL relativa
+// como fallback seguro — o browser chama /api/... no mesmo origin.
+const PUBLIC_API = process.env.NEXT_PUBLIC_API_URL || '';
 
 export const API_BASE = typeof window === 'undefined' ? INTERNAL_API : PUBLIC_API;
 
