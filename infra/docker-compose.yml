@@ -1,0 +1,106 @@
+version: '3.9'
+
+networks:
+  botnet:
+    driver: bridge
+
+volumes:
+  sqlite_data:
+  waha_data:
+  redis_data:
+
+services:
+  waha:
+    image: devlikeapro/waha:latest
+    container_name: waha
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      WHATSAPP_API_KEY: ${WAHA_API_KEY}
+      WHATSAPP_HOOK_URL: http://backend:3001/webhooks/waha
+      WHATSAPP_HOOK_EVENTS: message,session.status
+    volumes:
+      - waha_data:/app/.waha
+    networks:
+      - botnet
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - botnet
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../apps/backend
+      dockerfile: Dockerfile
+    container_name: backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      WAHA_URL: ${WAHA_URL:-http://waha:3000}
+      WAHA_API_KEY: ${WAHA_API_KEY}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_USER: ${ADMIN_USER}
+      ADMIN_PASS_HASH: ${ADMIN_PASS_HASH}
+      DATABASE_URL: file:/data/bot.db
+      REDIS_URL: redis://redis:6379
+    volumes:
+      - sqlite_data:/data
+    networks:
+      - botnet
+    depends_on:
+      redis:
+        condition: service_healthy
+      waha:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  admin:
+    build:
+      context: ../apps/admin
+      dockerfile: Dockerfile
+    container_name: admin
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+      PORT: 3002
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+      INTERNAL_API_URL: http://backend:3001
+    networks:
+      - botnet
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s

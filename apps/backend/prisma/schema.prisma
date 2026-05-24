@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Command {
+  id            Int          @id @default(autoincrement())
+  trigger       String       @unique
+  type          String       @default("static") // static | http | shell
+  payload       String
+  enabled       Boolean      @default(true)
+  allowedScopes String       @default("{}") // JSON: { dms: bool, groups: bool, groupIds: string[] }
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  logs          MessageLog[]
+}
+
+model ScheduleProfile {
+  id              Int      @id @default(autoincrement())
+  name            String
+  timezone        String   @default("America/Sao_Paulo")
+  ranges          String   @default("[]") // JSON: [{dow: 0-6, startHHmm: "22:00", endHHmm: "07:00"}]
+  message         String
+  enabled         Boolean  @default(true)
+  appliesToDms    Boolean  @default(false)
+  allowedGroupIds String   @default("[]") // JSON: string[]
+  cooldownSeconds Int      @default(3600)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model MessageLog {
+  id               Int      @id @default(autoincrement())
+  direction        String   // inbound | outbound
+  chatId           String
+  isGroup          Boolean  @default(false)
+  from             String
+  body             String
+  matchedCommandId Int?
+  command          Command? @relation(fields: [matchedCommandId], references: [id])
+  createdAt        DateTime @default(now())
+}
+
+model Settings {
+  id               Int      @id @default(1)
+  commandPrefix    String   @default("!")
+  defaultTimezone  String   @default("America/Sao_Paulo")
+  botEnabled       Boolean  @default(true)
+  updatedAt        DateTime @updatedAt
+}
