@@ -27,14 +27,14 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       WHATSAPP_API_KEY: ${WAHA_API_KEY}
-      WHATSAPP_HOOK_URL: http://backend:3001/api/webhooks/waha
-      WHATSAPP_HOOK_EVENTS: message,session.status
+      # Webhook configurado por-sessão pelo backend (onModuleInit) com customHeaders.
+      # Não usar WHATSAPP_HOOK_URL aqui — criaria um segundo webhook sem o header secreto.
     volumes:
       - waha_data:/app/.waha
     networks:
       - botnet
     healthcheck:
-      test: ["CMD-SHELL", "curl -f -H \"X-Api-Key: $$WHATSAPP_API_KEY\" http://localhost:3000/api/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf -H \"X-Api-Key: $$WHATSAPP_API_KEY\" http://localhost:3000/api/sessions || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
