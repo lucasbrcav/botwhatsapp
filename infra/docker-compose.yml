@@ -18,6 +18,7 @@ services:
   # ------------------------------------------------------------------ #
   waha:
     image: devlikeapro/waha:noweb
+    platform: linux/amd64   # WAHA não tem imagem ARM64 — QEMU emula AMD64
     container_name: waha
     restart: unless-stopped
     # Porta exposta somente para acesso local temporário durante setup.
